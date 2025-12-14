@@ -85,7 +85,7 @@ const GermanCipher = () => {
 
                 {outputText && (
                     <div className="output-section" aria-live="polite">
-                        <h2>Результат:</h2>
+                        <h2>Полученный результат</h2>
                         <div className="output-box" id="output-text">
                             {outputText}
                         </div>
