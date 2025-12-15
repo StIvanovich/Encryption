@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-const DEFAULT_NONCE_LENGTH = 16;
+const DEFAULT_LENGTH = 16;
 
 class EncrypRC4 {
-    static generateNonce(length = DEFAULT_NONCE_LENGTH) {
+    static generateNonce(length = DEFAULT_LENGTH) {
         return crypto.getRandomValues(new Uint8Array(length));
     }
 
@@ -15,7 +15,7 @@ class EncrypRC4 {
 
     static hexToBytes(hex) {
         if (hex.length % 2 !== 0) {
-            throw new Error("Некорректная строка: нечётное количество символов");
+            throw new Error("Ошибка: нечётное количество символов");
         }
         const bytes = new Uint8Array(hex.length / 2);
         for (let i = 0; i < hex.length; i += 2) {
@@ -139,7 +139,7 @@ const Check = () => {
 
     return (
         <div className="check">
-            <h1>RC4</h1>
+            <h1>Поточный шифр RC4</h1>
 
             <textarea
                 className="text-input"
@@ -151,7 +151,7 @@ const Check = () => {
 
             <input type="text" className="text-input" placeholder="Ваш ключ" value={key} onChange={(e) => setKey(e.target.value)} aria-label="Ключ" />
 
-            <textarea className="text-output" placeholder="Результат..." value={outputText} readOnly aria-label="Результат" />
+            <textarea className="text-output" placeholder="Результат шифрования" value={outputText} readOnly aria-label="Результат" />
 
             <div className="button-group">
                 <button className="action-button" onClick={handleEncrypt}>
