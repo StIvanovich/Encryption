@@ -1,15 +1,15 @@
 import { useState } from "react";
 
-const DEFAULT_LENGTH = 16;
+const DEFAULT_NONCE_LENGTH = 16;
 
 class EncrypRC4 {
-    static generateNonce(length = DEFAULT_LENGTH) {
+    static generateNonce(length = DEFAULT_NONCE_LENGTH) {
         return crypto.getRandomValues(new Uint8Array(length));
     }
 
     static bytesToHex(bytes) {
         return Array.from(bytes)
-            .map((b) => b.toString(16).padStart(2, "0"))
+            .map((byte) => byte.toString(16).padStart(2, "0"))
             .join("");
     }
 
@@ -26,79 +26,79 @@ class EncrypRC4 {
 
     static async deriveKey(originalKey, nonce) {
         const encoder = new TextEncoder();
-        const keyData = encoder.encode(originalKey);
-        const combined = new Uint8Array(keyData.length + nonce.length);
-        combined.set(keyData);
-        combined.set(nonce, keyData.length);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", combined);
-        return new Uint8Array(hashBuffer);
+        const keyBytes = encoder.encode(originalKey);
+        const combined = new Uint8Array(keyBytes.length + nonce.length);
+        combined.set(keyBytes);
+        combined.set(nonce, keyBytes.length);
+        const hash = await crypto.subtle.digest("SHA-256", combined);
+        return new Uint8Array(hash);
     }
 
-    static async encrypt(text, key) {
+    static async encrypt(plaintext, key) {
         const nonce = this.generateNonce();
         const effectiveKey = await this.deriveKey(key, nonce);
-        const textBytes = new TextEncoder().encode(text);
+        const plaintextBytes = new TextEncoder().encode(plaintext);
 
-        const s = new Uint8Array(256);
+        const sBox = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
-            s[i] = i;
+            sBox[i] = i;
         }
 
         let j = 0;
         for (let i = 0; i < 256; i++) {
-            j = (j + s[i] + effectiveKey[i % effectiveKey.length]) % 256;
-            [s[i], s[j]] = [s[j], s[i]];
+            j = (j + sBox[i] + effectiveKey[i % effectiveKey.length]) % 256;
+            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
         }
 
-        const result = new Uint8Array(textBytes.length);
+        const ciphertext = new Uint8Array(plaintextBytes.length);
         let i = 0;
         j = 0;
-        for (let k = 0; k < textBytes.length; k++) {
+        for (let k = 0; k < plaintextBytes.length; k++) {
             i = (i + 1) % 256;
-            j = (j + s[i]) % 256;
-            [s[i], s[j]] = [s[j], s[i]];
-            const randomByte = s[(s[i] + s[j]) % 256];
-            result[k] = textBytes[k] ^ randomByte;
+            j = (j + sBox[i]) % 256;
+            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
+            const keystreamByte = sBox[(sBox[i] + sBox[j]) % 256];
+            ciphertext[k] = plaintextBytes[k] ^ keystreamByte;
         }
 
         const nonceHex = this.bytesToHex(nonce);
-        const encryptedHex = this.bytesToHex(result);
-        return `${nonceHex}:${encryptedHex}`;
+        const ciphertextHex = this.bytesToHex(ciphertext);
+        return `${nonceHex}:${ciphertextHex}`;
     }
 
-    static async decrypt(encryptedWithNonce, key) {
-        const parts = encryptedWithNonce.split(":");
-        if (parts.length !== 2) {
+    static async decrypt(encryptedData, key) {
+        const [nonceHex, ciphertextHex] = encryptedData.split(":");
+        if (!nonceHex || !ciphertextHex) {
             throw new Error("Формат должен быть: (nonce:hex)");
         }
-        const [nonceHex, encryptedHex] = parts;
+
         const nonce = this.hexToBytes(nonceHex);
-        const encryptedBytes = this.hexToBytes(encryptedHex);
+        const ciphertext = this.hexToBytes(ciphertextHex);
         const effectiveKey = await this.deriveKey(key, nonce);
 
-        const s = new Uint8Array(256);
+        const sBox = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
-            s[i] = i;
+            sBox[i] = i;
         }
 
         let j = 0;
         for (let i = 0; i < 256; i++) {
-            j = (j + s[i] + effectiveKey[i % effectiveKey.length]) % 256;
-            [s[i], s[j]] = [s[j], s[i]];
+            j = (j + sBox[i] + effectiveKey[i % effectiveKey.length]) % 256;
+            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
         }
 
-        const result = new Uint8Array(encryptedBytes.length);
+        const plaintextBytes = new Uint8Array(ciphertext.length);
         let i = 0;
         j = 0;
-        for (let k = 0; k < encryptedBytes.length; k++) {
+        for (let k = 0; k < ciphertext.length; k++) {
             i = (i + 1) % 256;
-            j = (j + s[i]) % 256;
-            [s[i], s[j]] = [s[j], s[i]];
-            const randomByte = s[(s[i] + s[j]) % 256];
-            result[k] = encryptedBytes[k] ^ randomByte;
+            j = (j + sBox[i]) % 256;
+            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
+            const keystreamByte = sBox[(sBox[i] + sBox[j]) % 256];
+            plaintextBytes[k] = ciphertext[k] ^ keystreamByte;
         }
 
-        return new TextDecoder().decode(result);
+        return new TextDecoder().decode(plaintextBytes);
     }
 }
 
@@ -113,9 +113,9 @@ const Check = () => {
             return;
         }
         try {
-            const result = await EncrypRC4.encrypt(inputText, key);
-            setOutputText(result);
-        } catch (err) {
+            const encrypted = await EncrypRC4.encrypt(inputText, key);
+            setOutputText(encrypted);
+        } catch {
             setOutputText("Ошибка шифрования");
         }
     };
@@ -126,13 +126,9 @@ const Check = () => {
             return;
         }
         try {
-            console.log(inputText);
-            console.log(key);
-
-            const result = await EncrypRC4.decrypt(inputText, key);
-            console.log(result);
-            setOutputText(result);
-        } catch (err) {
+            const decrypted = await EncrypRC4.decrypt(inputText, key);
+            setOutputText(decrypted);
+        } catch {
             setOutputText("Ошибка: проверьте формат и ключ");
         }
     };
@@ -143,7 +139,7 @@ const Check = () => {
 
             <textarea
                 className="text-input"
-                placeholder="Введите то, что хотитете зашифровать или расшифровать"
+                placeholder="Введите то, что хотите зашифровать или расшифровать"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 aria-label="Входные данные"
