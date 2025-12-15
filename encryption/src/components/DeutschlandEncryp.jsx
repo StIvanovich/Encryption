@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const GermanCipher = () => {
+const DeutschlandEncryp = () => {
     const [inputText, setInputText] = useState("");
     const [outputText, setOutputText] = useState("");
 
@@ -59,10 +59,10 @@ const GermanCipher = () => {
     const handleDecrypt = () => setOutputText(decrypt(inputText));
 
     return (
-        <div className="cipher-container" role="region" aria-labelledby="cipher-title">
+        <div role="region">
             <header>
-                <h1 id="cipher-title">Немецкий шифр ADFGVX</h1>
-                <p className="subtitle">Первой мировой войны (1918)</p>
+                <h1>Немецкий шифр ADFGVX</h1>
+                <p className="subtitle">Первой мировой войны </p>
             </header>
 
             <main>
@@ -96,4 +96,4 @@ const GermanCipher = () => {
     );
 };
 
-export default GermanCipher;
+export default DeutschlandEncryp;
