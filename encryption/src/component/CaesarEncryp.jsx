@@ -1,38 +1,26 @@
 import { useState } from "react";
 
-const ENGLISH_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 const RUSSIAN_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+const ENGLISH_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
-const getAlphabet = (character) => {
-    const lowerCharacter = character.toLowerCase();
-    if (ENGLISH_ALPHABET.includes(lowerCharacter)) {
-        return ENGLISH_ALPHABET;
-    }
-    if (RUSSIAN_ALPHABET.includes(lowerCharacter)) {
-        return RUSSIAN_ALPHABET;
-    }
+const getAlphabet = (char) => {
+    const lower = char.toLowerCase();
+    if (ENGLISH_ALPHABET.includes(lower)) return ENGLISH_ALPHABET;
+    if (RUSSIAN_ALPHABET.includes(lower)) return RUSSIAN_ALPHABET;
     return null;
 };
 
 const shiftLetter = (letter, shift) => {
     const alphabet = getAlphabet(letter);
-    if (!alphabet) {
-        return letter;
-    }
+    if (!alphabet) return letter;
 
-    const wasUpperCase = letter === letter.toUpperCase();
-    const lowerLetter = letter.toLowerCase();
-
-    const currentIndex = alphabet.indexOf(lowerLetter);
-    const newIndex = (currentIndex + shift + alphabet.length) % alphabet.length;
-
+    const isUpper = letter === letter.toUpperCase();
+    const lower = letter.toLowerCase();
+    const index = alphabet.indexOf(lower);
+    const newIndex = (index + shift + alphabet.length) % alphabet.length;
     let newLetter = alphabet[newIndex];
 
-    if (wasUpperCase) {
-        newLetter = newLetter.toUpperCase();
-    }
-
-    return newLetter;
+    return isUpper ? newLetter.toUpperCase() : newLetter;
 };
 
 const CaesarEncryp = () => {
@@ -40,30 +28,12 @@ const CaesarEncryp = () => {
     const [shift, setShift] = useState(3);
     const [resultText, setResultText] = useState("");
 
-    const encrypt = () => {
-        const inputCharacters = inputText.split("");
-        const encryptedCharacters = [];
-
-        for (const character of inputCharacters) {
-            const encryptedChar = shiftLetter(character, shift);
-            encryptedCharacters.push(encryptedChar);
-        }
-
-        const encryptedText = encryptedCharacters.join("");
-        setResultText(encryptedText);
-    };
-
-    const decrypt = () => {
-        const inputCharacters = inputText.split("");
-        const decryptedCharacters = [];
-
-        for (const character of inputCharacters) {
-            const decryptedChar = shiftLetter(character, -shift);
-            decryptedCharacters.push(decryptedChar);
-        }
-
-        const decryptedText = decryptedCharacters.join("");
-        setResultText(decryptedText);
+    const processText = (direction) => {
+        const output = inputText
+            .split("")
+            .map((char) => shiftLetter(char, shift * direction))
+            .join("");
+        setResultText(output);
     };
 
     const bruteForce = () => {
@@ -72,30 +42,24 @@ const CaesarEncryp = () => {
             return;
         }
 
-        let alphabet = null;
-        for (const char of inputText) {
-            const a = getAlphabet(char);
-            if (a) {
-                alphabet = a;
-                break;
-            }
-        }
+        const alphabet = inputText
+            .split("")
+            .map(getAlphabet)
+            .find((a) => a !== null);
 
         if (!alphabet) {
             setResultText("Текст не содержит букв.");
             return;
         }
 
-        const maxShift = alphabet.length;
-        let results = [];
-
-        for (let s = 1; s < maxShift; s++) {
+        const results = Array.from({ length: alphabet.length - 1 }, (_, i) => {
+            const s = i + 1;
             const decrypted = inputText
                 .split("")
                 .map((c) => shiftLetter(c, -s))
                 .join("");
-            results.push(`Сдвиг ${s}: ${decrypted}`);
-        }
+            return `Сдвиг ${s}: ${decrypted}`;
+        });
 
         setResultText(results.join("\n"));
     };
@@ -111,8 +75,8 @@ const CaesarEncryp = () => {
                 className="shift-input"
                 value={shift}
                 onChange={(e) => {
-                    const value = parseInt(e.target.value, 10);
-                    setShift(isNaN(value) ? 0 : value);
+                    const val = parseInt(e.target.value, 10);
+                    setShift(isNaN(val) ? 0 : val);
                 }}
                 min="-100"
                 max="100"
@@ -120,10 +84,10 @@ const CaesarEncryp = () => {
             />
 
             <div className="button-group">
-                <button className="action-button encrypt" onClick={encrypt}>
+                <button className="action-button encrypt" onClick={() => processText(1)}>
                     Зашифровать
                 </button>
-                <button className="action-button decrypt" onClick={decrypt}>
+                <button className="action-button decrypt" onClick={() => processText(-1)}>
                     Расшифровать
                 </button>
                 <button className="action-button brute-force" onClick={bruteForce}>
