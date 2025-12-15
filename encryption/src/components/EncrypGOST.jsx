@@ -24,48 +24,43 @@ class EncrypGOST extends React.Component {
         this.textDecoder = new TextDecoder();
     }
 
-    handleInputTextChange = (event) => {
-        this.setState({ inputText: event.target.value });
+    handleInputTextChange = (e) => {
+        this.setState({ inputText: e.target.value });
     };
 
-    handleKeyChange = (event) => {
-        this.setState({ encryptionKey: event.target.value });
+    handleKeyChange = (e) => {
+        this.setState({ encryptionKey: e.target.value });
     };
 
-    convertStringToBytes = (text) => {
-        return this.textEncoder.encode(text);
-    };
+    stringToBytes = (str) => this.textEncoder.encode(str);
+    bytesToString = (bytes) => this.textDecoder.decode(bytes);
 
-    convertBytesToString = (bytes) => {
-        return this.textDecoder.decode(bytes);
-    };
-
-    normalizeKeyToGost256Bit = (key) => {
-        const keyBytes = this.convertStringToBytes(key);
-        const extended = new Uint8Array(32);
+    prepareKey = (key) => {
+        const keyBytes = this.stringToBytes(key);
+        const extended = new Uint8Array(32).fill(0);
         for (let i = 0; i < 32; i++) {
-            extended[i] = keyBytes.length > 0 ? keyBytes[i % keyBytes.length] : 0;
+            extended[i] = keyBytes[i % keyBytes.length] || 0;
         }
 
-        const words = new Uint32Array(8);
+        const keyWords = new Uint32Array(8);
         for (let i = 0; i < 8; i++) {
-            words[i] = extended[i * 4] | (extended[i * 4 + 1] << 8) | (extended[i * 4 + 2] << 16) | (extended[i * 4 + 3] << 24);
+            keyWords[i] = extended[i * 4] | (extended[i * 4 + 1] << 8) | (extended[i * 4 + 2] << 16) | (extended[i * 4 + 3] << 24);
         }
-        return words;
+        return keyWords;
     };
 
-    addGostPadding = (data) => {
-        const pad = 8 - (data.length % 8);
-        const padded = new Uint8Array(data.length + pad);
+    addPadding = (data) => {
+        const padLength = 8 - (data.length % 8);
+        const padded = new Uint8Array(data.length + padLength);
         padded.set(data);
-        padded.fill(pad, data.length);
+        padded.fill(padLength, data.length);
         return padded;
     };
 
-    removeGostPadding = (data) => {
-        const pad = data[data.length - 1];
-        if (pad < 1 || pad > 8) return data;
-        return data.slice(0, -pad);
+    removePadding = (data) => {
+        const padLength = data[data.length - 1];
+        if (padLength < 1 || padLength > 8) return data;
+        return data.slice(0, -padLength);
     };
 
     bytesToWords = (block) => {
@@ -78,96 +73,94 @@ class EncrypGOST extends React.Component {
         return new Uint8Array([w1 & 0xff, (w1 >> 8) & 0xff, (w1 >> 16) & 0xff, (w1 >> 24) & 0xff, w2 & 0xff, (w2 >> 8) & 0xff, (w2 >> 16) & 0xff, (w2 >> 24) & 0xff]);
     };
 
-    gostFeistel = (value, roundKey) => {
+    gostRoundFunction = (value, roundKey) => {
         let x = value;
         for (let i = 0; i < 4; i++) {
-            let sum = (x + roundKey) >>> 0;
-            let y = 0;
+            const sum = (x + roundKey) >>> 0;
+            let substituted = 0;
             for (let j = 0; j < 8; j++) {
                 const nibble = (sum >> (4 * j)) & 0xf;
-                const sub = this.gostSBoxes[j][nibble];
-                y |= sub << (4 * j);
+                substituted |= this.gostSBoxes[j][nibble] << (4 * j);
             }
-            x = ((y << 11) | (y >>> 21)) >>> 0;
+            x = ((substituted << 11) | (substituted >>> 21)) >>> 0;
         }
         return x;
     };
 
-    encryptBlock = (left, right, keyWords) => {
-        for (let r = 0; r < 32; r++) {
-            const temp = right;
-            right = (left ^ this.gostFeistel(right, keyWords[r % 8])) >>> 0;
-            left = temp;
+    encryptBlock = (left, right, keySchedule) => {
+        for (let round = 0; round < 32; round++) {
+            const newRight = (left ^ this.gostRoundFunction(right, keySchedule[round % 8])) >>> 0;
+            left = right;
+            right = newRight;
         }
         return [right, left];
     };
 
-    decryptBlock = (left, right, keyWords) => {
-        for (let r = 31; r >= 0; r--) {
-            const temp = right;
-            right = (left ^ this.gostFeistel(right, keyWords[r % 8])) >>> 0;
-            left = temp;
+    decryptBlock = (left, right, keySchedule) => {
+        for (let round = 31; round >= 0; round--) {
+            const newRight = (left ^ this.gostRoundFunction(right, keySchedule[round % 8])) >>> 0;
+            left = right;
+            right = newRight;
         }
         return [right, left];
     };
 
-    performGostEncryption = (text, key) => {
+    encryptText = (text, key) => {
         if (!key.trim()) return "[Ошибка: ключ не задан]";
         try {
-            const keyWords = this.normalizeKeyToGost256Bit(key);
-            const plainBytes = this.addGostPadding(this.convertStringToBytes(text));
-            const out = new Uint8Array(plainBytes.length);
+            const keySchedule = this.prepareKey(key);
+            const plainBytes = this.addPadding(this.stringToBytes(text));
+            const cipherBytes = new Uint8Array(plainBytes.length);
 
             for (let i = 0; i < plainBytes.length; i += 8) {
                 const block = plainBytes.slice(i, i + 8);
                 const [l, r] = this.bytesToWords(block);
-                const [el, er] = this.encryptBlock(l, r, keyWords);
-                const encryptedBlock = this.wordsToBytes(el, er);
-                out.set(encryptedBlock, i);
+                const [cl, cr] = this.encryptBlock(l, r, keySchedule);
+                cipherBytes.set(this.wordsToBytes(cl, cr), i);
             }
 
-            return btoa(String.fromCharCode(...out));
-        } catch (e) {
+            return btoa(String.fromCharCode(...cipherBytes));
+        } catch {
             return "[Ошибка шифрования]";
         }
     };
 
-    performGostDecryption = (base64, key) => {
+    decryptText = (base64Cipher, key) => {
         if (!key.trim()) return "[Ошибка: ключ не задан]";
         try {
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.split("").map((c) => c.charCodeAt(0)));
-            if (bytes.length % 8 !== 0) {
+            const binary = atob(base64Cipher);
+            const cipherBytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+
+            if (cipherBytes.length % 8 !== 0) {
                 return "[Ошибка: длина шифротекста не кратна 8 байтам]";
             }
 
-            const keyWords = this.normalizeKeyToGost256Bit(key);
-            const out = new Uint8Array(bytes.length);
+            const keySchedule = this.prepareKey(key);
+            const plainBytes = new Uint8Array(cipherBytes.length);
 
-            for (let i = 0; i < bytes.length; i += 8) {
-                const block = bytes.slice(i, i + 8);
+            for (let i = 0; i < cipherBytes.length; i += 8) {
+                const block = cipherBytes.slice(i, i + 8);
                 const [l, r] = this.bytesToWords(block);
-                const [dl, dr] = this.decryptBlock(l, r, keyWords);
-                const decryptedBlock = this.wordsToBytes(dl, dr);
-                out.set(decryptedBlock, i);
+                const [dl, dr] = this.decryptBlock(l, r, keySchedule);
+                plainBytes.set(this.wordsToBytes(dl, dr), i);
             }
 
-            const unpadded = this.removeGostPadding(out);
-            return this.convertBytesToString(unpadded);
-        } catch (e) {
+            const unpadded = this.removePadding(plainBytes);
+            return this.bytesToString(unpadded);
+        } catch {
             return "[Ошибка расшифровки: проверьте ключ и шифротекст]";
         }
     };
 
-    handleEncryptClick = () => {
+    handleEncrypt = () => {
         const { inputText, encryptionKey } = this.state;
-        const result = this.performGostEncryption(inputText, encryptionKey);
+        const result = this.encryptText(inputText, encryptionKey);
         this.setState({ outputText: result });
     };
 
-    handleDecryptClick = () => {
+    handleDecrypt = () => {
         const { inputText, encryptionKey } = this.state;
-        const result = this.performGostDecryption(inputText, encryptionKey);
+        const result = this.decryptText(inputText, encryptionKey);
         this.setState({ outputText: result });
     };
 
@@ -178,17 +171,17 @@ class EncrypGOST extends React.Component {
             <div className="cipher-container">
                 <h1 className="app-title">ГОСТ 28147-89</h1>
 
-                <input type="text" className="key-input" placeholder="Введите ваш ключ" value={encryptionKey} onChange={this.handleKeyChange} aria-label="Ключ шифрования" />
+                <input type="text" className="key-input" placeholder="Введите ключ шифрования" value={encryptionKey} onChange={this.handleKeyChange} aria-label="Ключ" />
 
-                <textarea className="input-area" placeholder="Введите текст шифрования или дешифрования" value={inputText} onChange={this.handleInputTextChange} aria-label="Входной текст" />
+                <textarea className="input-area" placeholder="Текст для шифрования или для расшифровки" value={inputText} onChange={this.handleInputTextChange} aria-label="Входные данные" />
 
-                <textarea className="output-area" placeholder="Вывод" value={outputText} readOnly aria-label="Результат операции" />
+                <textarea className="output-area" placeholder="Результат" value={outputText} readOnly aria-label="Результат" />
 
                 <div className="button-group">
-                    <button className="action-button encrypt-btn" onClick={this.handleEncryptClick}>
+                    <button className="action-button encrypt-btn" onClick={this.handleEncrypt}>
                         Зашифровать
                     </button>
-                    <button className="action-button decrypt-btn" onClick={this.handleDecryptClick}>
+                    <button className="action-button decrypt-btn" onClick={this.handleDecrypt}>
                         Расшифровать
                     </button>
                 </div>
