@@ -107,23 +107,3 @@ body {
     resize: vertical;
     min-height: 120px;
 }
-
-/* Адаптивность */
-@media (max-width: 600px) {
-    .cipher-container {
-        padding: 18px;
-    }
-
-    .button-group {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .action-button {
-        width: 100%;
-    }
-
-    .shift-input {
-        max-width: 100%;
-    }
-}

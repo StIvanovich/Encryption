@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 const ENGLISH_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 const RUSSIAN_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
@@ -72,7 +72,6 @@ const CaesarEncryp = () => {
             return;
         }
 
-        // Определяем алфавит по первому найденному буквенном символу
         let alphabet = null;
         for (const char of inputText) {
             const a = getAlphabet(char);
