@@ -1,99 +1,218 @@
 import React, { useState } from "react";
+import "./ADFGX.css";
 
-const DeutschlandEncryp = () => {
-    const [inputText, setInputText] = useState("");
-    const [outputText, setOutputText] = useState("");
+const POLYBIUS_SQUARE = [
+    ["A", "B", "C", "D", "E"],
+    ["F", "G", "H", "I", "K"],
+    ["L", "M", "N", "O", "P"],
+    ["Q", "R", "S", "T", "U"],
+    ["V", "W", "X", "Y", "Z"],
+];
 
-    const adfgvxMatrix = [
-        ["p", "h", "0", "q", "g", "6"],
-        ["4", "m", "e", "a", "1", "y"],
-        ["l", "2", "n", "o", "f", "d"],
-        ["x", "k", "r", "3", "c", "v"],
-        ["s", "5", "z", "w", "7", "b"],
-        ["j", "9", "u", "t", "i", "8"],
-    ];
+const ADFGX_CHARS = "ADFGX";
 
-    const headers = ["A", "D", "F", "G", "V", "X"];
+const cleanPlainText = (text) => {
+    let cleaned = "";
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i].toUpperCase();
+        if (c >= "A" && c <= "Z") {
+            cleaned += c === "J" ? "I" : c;
+        }
+    }
+    return cleaned;
+};
 
-    const buildMap = () => {
-        const map = {};
-        for (let row = 0; row < adfgvxMatrix.length; row++) {
-            for (let col = 0; col < headers.length; col++) {
-                const char = adfgvxMatrix[row][col].toLowerCase();
-                map[char] = headers[row] + headers[col];
+const cleanCipherText = (text) => {
+    const validChars = new Set(["A", "D", "F", "G", "X"]);
+    let cleaned = "";
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i].toUpperCase();
+        if (validChars.has(c)) {
+            cleaned += c;
+        }
+    }
+    return cleaned;
+};
+
+const processKeyword = (key) => {
+    const seen = new Set();
+    let unique = "";
+    for (let i = 0; i < key.length; i++) {
+        const c = key[i].toUpperCase();
+        if (c >= "A" && c <= "Z" && !seen.has(c)) {
+            seen.add(c);
+            unique += c;
+        }
+    }
+    return unique;
+};
+
+const findInSquare = (char) => {
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+            if (POLYBIUS_SQUARE[row][col] === char) {
+                return [row, col];
             }
         }
-        return map;
-    };
+    }
+    return null;
+};
 
-    const encrypt = (text) => {
-        const clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const map = buildMap();
-        return clean
-            .split("")
-            .map((char) => map[char] || "")
-            .join("");
-    };
+const encryptADFGX = (plaintext, keyword) => {
+    const cleanPlain = cleanPlainText(plaintext);
+    const cleanKey = processKeyword(keyword);
+    if (!cleanPlain || !cleanKey) return "";
 
-    const decrypt = (encoded) => {
-        const clean = encoded.toUpperCase().replace(/[^ADFGVX]/g, "");
-        if (clean.length % 2 !== 0) {
-            return "Ошибка: требуется чётное число символов ADFGVX";
+    let pairs = "";
+    for (const char of cleanPlain) {
+        const coords = findInSquare(char);
+        if (coords) {
+            const [row, col] = coords;
+            pairs += ADFGX_CHARS[row] + ADFGX_CHARS[col];
         }
+    }
 
-        const map = buildMap();
-        const reverseMap = {};
-        for (const [char, code] of Object.entries(map)) {
-            reverseMap[code] = char;
-        }
+    const keyLen = cleanKey.length;
+    const columns = Array(keyLen)
+        .fill()
+        .map(() => []);
 
-        let result = "";
-        for (let i = 0; i < clean.length; i += 2) {
-            const pair = clean[i] + clean[i + 1];
-            result += reverseMap[pair] || "";
+    for (let i = 0; i < pairs.length; i++) {
+        columns[i % keyLen].push(pairs[i]);
+    }
+
+    const sortedIndices = [...Array(keyLen).keys()].sort((a, b) => cleanKey[a].localeCompare(cleanKey[b]));
+
+    let result = "";
+    for (const idx of sortedIndices) {
+        result += columns[idx].join("");
+    }
+
+    return result;
+};
+
+const decryptADFGX = (ciphertext, keyword) => {
+    const cleanCipher = cleanCipherText(ciphertext);
+    const cleanKey = processKeyword(keyword);
+    if (!cleanCipher || !cleanKey) return "";
+
+    if (cleanCipher.length % 2 !== 0) {
+        return "Ошибка: нечётное количество символов в шифртексте";
+    }
+
+    const keyLen = cleanKey.length;
+    const total = cleanCipher.length;
+    const baseLen = Math.floor(total / keyLen);
+    const remainder = total % keyLen;
+
+    const colLengths = Array(keyLen).fill(baseLen);
+    for (let i = 0; i < remainder; i++) {
+        colLengths[i]++;
+    }
+
+    const sortedIndices = [...Array(keyLen).keys()].sort((a, b) => cleanKey[a].localeCompare(cleanKey[b]));
+
+    const columns = Array(keyLen)
+        .fill()
+        .map(() => []);
+    let pos = 0;
+    for (const idx of sortedIndices) {
+        for (let i = 0; i < colLengths[idx]; i++) {
+            columns[idx].push(cleanCipher[pos++]);
         }
-        return result;
+    }
+
+    let pairs = "";
+    const maxRows = Math.max(...colLengths);
+    for (let row = 0; row < maxRows; row++) {
+        for (let col = 0; col < keyLen; col++) {
+            if (row < columns[col].length) {
+                pairs += columns[col][row];
+            }
+        }
+    }
+
+    let result = "";
+    for (let i = 0; i < pairs.length; i += 2) {
+        const row = ADFGX_CHARS.indexOf(pairs[i]);
+        const col = ADFGX_CHARS.indexOf(pairs[i + 1]);
+        if (row === -1 || col === -1) continue;
+        result += POLYBIUS_SQUARE[row][col];
+    }
+
+    return result;
+};
+
+const ADFGX = () => {
+    const [plaintext, setPlaintext] = useState("");
+    const [ciphertext, setCiphertext] = useState("");
+    const [keyword, setKeyword] = useState("");
+    const [mode, setMode] = useState("encrypt");
+
+    const handleAction = () => {
+        if (mode === "encrypt") {
+            const result = encryptADFGX(plaintext, keyword);
+            setCiphertext(result);
+        } else {
+            const result = decryptADFGX(ciphertext, keyword);
+            setPlaintext(result);
+        }
     };
-
-    const handleEncrypt = () => setOutputText(encrypt(inputText));
-    const handleDecrypt = () => setOutputText(decrypt(inputText));
 
     return (
-        <div role="region">
-            <header>
-                <h1>Немецкий шифр ADFGVX</h1>
-                <p className="subtitle">Первой мировой войны </p>
-            </header>
+        <div className="adfgx-container">
+            <h2>Шифр ADFGX</h2>
 
-            <main>
-                <div className="input-section">
-                    <label htmlFor="input-text">Введите текст для шифрования или расшифровки:</label>
-                    <textarea id="input-text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Для примера, введите:hello " rows="4" aria-describedby="input-hint" />
-                    <p id="input-hint" className="hint">
-                        Используйте латинницу.
-                    </p>
-                </div>
+            <div className="input-group">
+                <label>Ключевое слово:</label>
+                <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Например: SORRY" />
+            </div>
 
-                <div className="actions">
-                    <button type="button" onClick={handleEncrypt} aria-label="Зашифровать введённый текст">
-                        Зашифровать
-                    </button>
-                    <button type="button" onClick={handleDecrypt} aria-label="Расшифровать введённый шифротекст">
-                        Расшифровать
-                    </button>
-                </div>
+            <div className="mode-toggle">
+                <label>
+                    <input type="radio" checked={mode === "encrypt"} onChange={() => setMode("encrypt")} />
+                    Зашифровать
+                </label>
+                <label>
+                    <input type="radio" checked={mode === "decrypt"} onChange={() => setMode("decrypt")} />
+                    Расшифровать
+                </label>
+            </div>
 
-                {outputText && (
-                    <div className="output-section" aria-live="polite">
-                        <h2>Полученный результат</h2>
-                        <div className="output-box" id="output-text">
-                            {outputText}
-                        </div>
+            <div className="text-input">
+                {mode === "encrypt" ? (
+                    <div>
+                        <label>Открытый текст:</label>
+                        <textarea value={plaintext} onChange={(e) => setPlaintext(e.target.value)} placeholder="Введите текст (только A–Z)" rows="4" />
+                    </div>
+                ) : (
+                    <div>
+                        <label>Шифртекст:</label>
+                        <textarea value={ciphertext} onChange={(e) => setCiphertext(e.target.value)} placeholder="Введите шифртекст (только A, D, F, G, X)" rows="4" />
                     </div>
                 )}
-            </main>
+            </div>
+
+            <button onClick={handleAction} className="action-button">
+                {mode === "encrypt" ? "Зашифровать" : "Расшифровать"}
+            </button>
+
+            <div className="result">
+                {mode === "encrypt" && ciphertext && (
+                    <>
+                        <h3>Результат:</h3>
+                        <div className="result-box">{ciphertext}</div>
+                    </>
+                )}
+                {mode === "decrypt" && plaintext && (
+                    <>
+                        <h3>Результат:</h3>
+                        <div className="result-box">{plaintext}</div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
 
-export default DeutschlandEncryp;
+export default ADFGX;

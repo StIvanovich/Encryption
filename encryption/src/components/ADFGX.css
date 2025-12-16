@@ -1,0 +1,85 @@
+/* src/components/ADFGX/ADFGX.css */
+.adfgx-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #fafafa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.adfgx-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.input-group,
+.mode-toggle,
+.text-input {
+    margin-bottom: 16px;
+}
+
+.input-group label,
+.text-input label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #444;
+}
+
+.input-group input,
+.text-input textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.mode-toggle {
+    display: flex;
+    gap: 20px;
+}
+
+.mode-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: #333;
+}
+
+.action-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-button:hover {
+    background-color: #3a5a80;
+}
+
+.result h3 {
+    margin-top: 20px;
+    color: #2c5282;
+}
+
+.result-box {
+    margin-top: 8px;
+    padding: 12px;
+    background-color: #eef4ff;
+    border: 1px solid #c3dafe;
+    border-radius: 4px;
+    word-break: break-all;
+    white-space: pre-wrap;
+    font-family: monospace;
+}
