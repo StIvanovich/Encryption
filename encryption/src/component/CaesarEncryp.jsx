@@ -1,101 +1,100 @@
-import { useState } from "react";
-
-const RUSSIAN_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-const ENGLISH_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-
-const getAlphabet = (char) => {
-    const lower = char.toLowerCase();
-    if (ENGLISH_ALPHABET.includes(lower)) return ENGLISH_ALPHABET;
-    if (RUSSIAN_ALPHABET.includes(lower)) return RUSSIAN_ALPHABET;
-    return null;
-};
-
-const shiftLetter = (letter, shift) => {
-    const alphabet = getAlphabet(letter);
-    if (!alphabet) return letter;
-
-    const isUpper = letter === letter.toUpperCase();
-    const lower = letter.toLowerCase();
-    const index = alphabet.indexOf(lower);
-    const newIndex = (index + shift + alphabet.length) % alphabet.length;
-    let newLetter = alphabet[newIndex];
-
-    return isUpper ? newLetter.toUpperCase() : newLetter;
-};
+import React, { useState } from "react";
 
 const CaesarEncryp = () => {
     const [inputText, setInputText] = useState("");
     const [shift, setShift] = useState(3);
-    const [resultText, setResultText] = useState("");
+    const [outputText, setOutputText] = useState("");
 
-    const processText = (direction) => {
-        const output = inputText
-            .split("")
-            .map((char) => shiftLetter(char, shift * direction))
-            .join("");
-        setResultText(output);
+    const RU_LOWERCASE = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+    const RU_UPPERCASE = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    const EN_LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+    const EN_UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    const shiftChar = (char, alphabet, shiftAmount) => {
+        const index = alphabet.indexOf(char);
+        if (index === -1) return char;
+        const len = alphabet.length;
+        const normalizedShift = ((shiftAmount % len) + len) % len;
+        const newIndex = (index + normalizedShift) % len;
+        return alphabet[newIndex];
     };
 
-    const bruteForce = () => {
-        if (!inputText.trim()) {
-            setResultText("Введите текст для взлома.");
-            return;
-        }
-
-        const alphabet = inputText
+    const caesar = (str, shiftAmount) => {
+        return str
             .split("")
-            .map(getAlphabet)
-            .find((a) => a !== null);
+            .map((char) => {
+                if (RU_LOWERCASE.includes(char)) {
+                    return shiftChar(char, RU_LOWERCASE, shiftAmount);
+                } else if (RU_UPPERCASE.includes(char)) {
+                    return shiftChar(char, RU_UPPERCASE, shiftAmount);
+                } else if (EN_LOWERCASE.includes(char)) {
+                    return shiftChar(char, EN_LOWERCASE, shiftAmount);
+                } else if (EN_UPPERCASE.includes(char)) {
+                    return shiftChar(char, EN_UPPERCASE, shiftAmount);
+                } else {
+                    return char;
+                }
+            })
+            .join("");
+    };
 
-        if (!alphabet) {
-            setResultText("Текст не содержит букв.");
-            return;
+    const handleEncrypt = () => {
+        const result = caesar(inputText, parseInt(shift, 10) || 0);
+        setOutputText(result);
+    };
+
+    const handleDecrypt = () => {
+        const result = caesar(inputText, -parseInt(shift, 10) || 0);
+        setOutputText(result);
+    };
+
+    const handleBruteForce = () => {
+        const results = [];
+        const hasCyrillic = /[а-яА-ЯёЁ]/.test(inputText);
+        const maxShift = hasCyrillic ? 33 : 26;
+
+        for (let s = 1; s < maxShift; s++) {
+            const attempt = caesar(inputText, -s);
+            results.push(`Смещение ${s}: ${attempt}`);
         }
 
-        const results = Array.from({ length: alphabet.length - 1 }, (_, i) => {
-            const s = i + 1;
-            const decrypted = inputText
-                .split("")
-                .map((c) => shiftLetter(c, -s))
-                .join("");
-            return `Сдвиг ${s}: ${decrypted}`;
-        });
-
-        setResultText(results.join("\n"));
+        setOutputText(results.join("\n"));
     };
 
     return (
         <div className="cipher-container">
-            <h1>Шифр Цезаря</h1>
+            <h2>Шифр Цезаря </h2>
 
-            <textarea className="input-field" placeholder="Введите текст для шифрования/расшифровки..." value={inputText} onChange={(e) => setInputText(e.target.value)} rows={4} />
+            <div className="input-group">
+                <label>
+                    Текст:
+                    <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} rows="5" cols="65" placeholder="Введите текст " />
+                </label>
+            </div>
 
-            <input
-                type="number"
-                className="shift-input"
-                value={shift}
-                onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    setShift(isNaN(val) ? 0 : val);
-                }}
-                min="-100"
-                max="100"
-                placeholder="Сдвиг"
-            />
+            <div className="shift-control">
+                <label>
+                    Смещение:
+                    <input type="number" value={shift} onChange={(e) => setShift(e.target.value)} min="1" max="100" />
+                </label>
+            </div>
 
             <div className="button-group">
-                <button className="action-button encrypt" onClick={() => processText(1)}>
+                <button onClick={handleEncrypt} className="btn encrypt">
                     Зашифровать
                 </button>
-                <button className="action-button decrypt" onClick={() => processText(-1)}>
+                <button onClick={handleDecrypt} className="btn decrypt">
                     Расшифровать
                 </button>
-                <button className="action-button brute-force" onClick={bruteForce}>
+                <button onClick={handleBruteForce} className="btn brute">
                     Взломать
                 </button>
             </div>
 
-            <textarea className="result-field" placeholder="Результат..." value={resultText} readOnly rows={6} />
+            <div className="result-section">
+                <strong>Результат:</strong>
+                <pre className="result-output">{outputText || "—"}</pre>
+            </div>
         </div>
     );
 };
