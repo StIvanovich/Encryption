@@ -1,11 +1,11 @@
 import "./App.css";
-import Check from "./components/EncrypRC4";
+import RC4 from "./components/EncrypRC4";
 
 function App() {
     return (
         <>
             <main className="app-container">
-                <Check />
+                <RC4 />
             </main>
         </>
     );

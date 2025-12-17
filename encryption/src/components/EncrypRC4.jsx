@@ -1,164 +1,186 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
-const DEFAULT_NONCE_LENGTH = 16;
-
-class EncrypRC4 {
-    static generateNonce(length = DEFAULT_NONCE_LENGTH) {
-        return crypto.getRandomValues(new Uint8Array(length));
-    }
-
-    static bytesToHex(bytes) {
-        return Array.from(bytes)
-            .map((byte) => byte.toString(16).padStart(2, "0"))
-            .join("");
-    }
-
-    static hexToBytes(hex) {
-        if (hex.length % 2 !== 0) {
-            throw new Error("Ошибка: нечётное количество символов");
-        }
-        const bytes = new Uint8Array(hex.length / 2);
-        for (let i = 0; i < hex.length; i += 2) {
-            bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+export default function RC4() {
+    function toBytes(str) {
+        const bytes = [];
+        for (let i = 0; i < str.length; i++) {
+            let charCode = str.charCodeAt(i);
+            if (charCode < 0x80) {
+                bytes.push(charCode);
+            } else if (charCode < 0x800) {
+                bytes.push(0xc0 | (charCode >> 6));
+                bytes.push(0x80 | (charCode & 0x3f));
+            } else if (charCode < 0xd800 || charCode >= 0xe000) {
+                bytes.push(0xe0 | (charCode >> 12));
+                bytes.push(0x80 | ((charCode >> 6) & 0x3f));
+                bytes.push(0x80 | (charCode & 0x3f));
+            } else {
+                i++;
+                const low = str.charCodeAt(i);
+                const codePoint = 0x10000 + ((charCode & 0x3ff) << 10) + (low & 0x3ff);
+                bytes.push(0xf0 | (codePoint >> 18));
+                bytes.push(0x80 | ((codePoint >> 12) & 0x3f));
+                bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+                bytes.push(0x80 | (codePoint & 0x3f));
+            }
         }
         return bytes;
     }
 
-    static async deriveKey(originalKey, nonce) {
-        const encoder = new TextEncoder();
-        const keyBytes = encoder.encode(originalKey);
-        const combined = new Uint8Array(keyBytes.length + nonce.length);
-        combined.set(keyBytes);
-        combined.set(nonce, keyBytes.length);
-        const hash = await crypto.subtle.digest("SHA-256", combined);
-        return new Uint8Array(hash);
+    function bytesToUtf8(bytes) {
+        let str = "";
+        let i = 0;
+        while (i < bytes.length) {
+            const b1 = bytes[i++];
+            if (b1 < 0x80) {
+                str += String.fromCharCode(b1);
+            } else if (b1 < 0xe0) {
+                str += String.fromCharCode(((b1 & 0x1f) << 6) | (bytes[i++] & 0x3f));
+            } else if (b1 < 0xf0) {
+                str += String.fromCharCode(((b1 & 0x0f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f));
+            } else {
+                const codePoint = ((b1 & 0x07) << 18) | ((bytes[i++] & 0x3f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f);
+                if (codePoint < 0x10000) {
+                    str += String.fromCharCode(codePoint);
+                } else {
+                    str += String.fromCharCode(0xd800 + ((codePoint - 0x10000) >> 10), 0xdc00 + ((codePoint - 0x10000) & 0x3ff));
+                }
+            }
+        }
+        return str;
     }
 
-    static async encrypt(plaintext, key) {
-        const nonce = this.generateNonce();
-        const effectiveKey = await this.deriveKey(key, nonce);
-        const plaintextBytes = new TextEncoder().encode(plaintext);
+    function bytesToHex(bytes) {
+        return bytes.map((b) => (b < 16 ? "0" : "") + b.toString(16)).join("");
+    }
 
-        const sBox = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-            sBox[i] = i;
+    function hexToBytes(hex) {
+        const bytes = [];
+        for (let i = 0; i < hex.length; i += 2) {
+            bytes.push(parseInt(hex.substr(i, 2), 16));
         }
+        return bytes;
+    }
 
+    function rc4(keyBytes, dataBytes) {
+        const S = Array.from({ length: 256 }, (_, i) => i);
         let j = 0;
         for (let i = 0; i < 256; i++) {
-            j = (j + sBox[i] + effectiveKey[i % effectiveKey.length]) % 256;
-            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
+            j = (j + S[i] + keyBytes[i % keyBytes.length]) % 256;
+            [S[i], S[j]] = [S[j], S[i]];
         }
 
-        const ciphertext = new Uint8Array(plaintextBytes.length);
+        const output = [];
         let i = 0;
         j = 0;
-        for (let k = 0; k < plaintextBytes.length; k++) {
+        for (let k = 0; k < dataBytes.length; k++) {
             i = (i + 1) % 256;
-            j = (j + sBox[i]) % 256;
-            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
-            const keystreamByte = sBox[(sBox[i] + sBox[j]) % 256];
-            ciphertext[k] = plaintextBytes[k] ^ keystreamByte;
+            j = (j + S[i]) % 256;
+            [S[i], S[j]] = [S[j], S[i]];
+            const keystream = S[(S[i] + S[j]) % 256];
+            output.push(dataBytes[k] ^ keystream);
         }
-
-        const nonceHex = this.bytesToHex(nonce);
-        const ciphertextHex = this.bytesToHex(ciphertext);
-        return `${nonceHex}:${ciphertextHex}`;
+        return output;
     }
 
-    static async decrypt(encryptedData, key) {
-        const [nonceHex, ciphertextHex] = encryptedData.split(":");
-        if (!nonceHex || !ciphertextHex) {
-            throw new Error("Формат должен быть: (nonce:hex)");
-        }
-
-        const nonce = this.hexToBytes(nonceHex);
-        const ciphertext = this.hexToBytes(ciphertextHex);
-        const effectiveKey = await this.deriveKey(key, nonce);
-
-        const sBox = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-            sBox[i] = i;
-        }
-
-        let j = 0;
-        for (let i = 0; i < 256; i++) {
-            j = (j + sBox[i] + effectiveKey[i % effectiveKey.length]) % 256;
-            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
-        }
-
-        const plaintextBytes = new Uint8Array(ciphertext.length);
-        let i = 0;
-        j = 0;
-        for (let k = 0; k < ciphertext.length; k++) {
-            i = (i + 1) % 256;
-            j = (j + sBox[i]) % 256;
-            [sBox[i], sBox[j]] = [sBox[j], sBox[i]];
-            const keystreamByte = sBox[(sBox[i] + sBox[j]) % 256];
-            plaintextBytes[k] = ciphertext[k] ^ keystreamByte;
-        }
-
-        return new TextDecoder().decode(plaintextBytes);
-    }
-}
-
-const Check = () => {
-    const [inputText, setInputText] = useState("");
+    const [key, setKey] = useState("Sorry");
+    const [inputText, setInputText] = useState("Please");
+    const [hexCiphertext, setHexCiphertext] = useState("");
     const [outputText, setOutputText] = useState("");
-    const [key, setKey] = useState("");
+    const [error, setError] = useState("");
 
-    const handleEncrypt = async () => {
-        if (!inputText.trim() || !key.trim()) {
-            setOutputText("");
-            return;
-        }
+    const clearError = () => {
+        if (error) setError("");
+    };
+
+    const handleEncrypt = () => {
+        clearError();
         try {
-            const encrypted = await EncrypRC4.encrypt(inputText, key);
-            setOutputText(encrypted);
-        } catch {
-            setOutputText("Ошибка шифрования");
+            if (!key.trim()) {
+                setError("Ключ не может быть пустым.");
+                return;
+            }
+            const keyBytes = toBytes(key);
+            const dataBytes = toBytes(inputText);
+            const encryptedBytes = rc4(keyBytes, dataBytes);
+            setHexCiphertext(bytesToHex(encryptedBytes));
+            setOutputText("");
+        } catch (err) {
+            setError("Ошибка при шифровании: " + (err.message || "неизвестная ошибка"));
         }
     };
 
-    const handleDecrypt = async () => {
-        if (!inputText.trim() || !key.trim()) {
-            setOutputText("");
-            return;
-        }
+    const handleDecrypt = () => {
+        clearError();
         try {
-            const decrypted = await EncrypRC4.decrypt(inputText, key);
-            setOutputText(decrypted);
-        } catch {
-            setOutputText("Ошибка: проверьте формат и ключ");
+            if (!key.trim()) {
+                setError("Ключ не может быть пустым.");
+                return;
+            }
+            if (!hexCiphertext) {
+                setError("Нет данных для расшифровки. Сначала зашифруйте текст.");
+                return;
+            }
+            const keyBytes = toBytes(key);
+            const dataBytes = hexToBytes(hexCiphertext);
+            const decryptedBytes = rc4(keyBytes, dataBytes);
+            const result = bytesToUtf8(decryptedBytes);
+            setOutputText(result);
+        } catch (err) {
+            setError("Ошибка при расшифровке: " + (err.message || "некорректные данные"));
         }
     };
 
     return (
-        <div className="check">
-            <h1>Поточный шифр RC4</h1>
+        <div className="rc4-container">
+            <div className="rc4-input-group">
+                <label>Введите ваш ключ:</label>
+                <input
+                    type="text"
+                    value={key}
+                    onChange={(e) => {
+                        setKey(e.target.value);
+                        clearError();
+                    }}
+                />
+            </div>
 
-            <textarea
-                className="text-input"
-                placeholder="Введите то, что хотите зашифровать или расшифровать"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                aria-label="Входные данные"
-            />
+            <div className="rc4-input-group">
+                <label>Текст для шифрования:</label>
+                <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => {
+                        setInputText(e.target.value);
+                        clearError();
+                    }}
+                />
+            </div>
 
-            <input type="text" className="text-input" placeholder="Ваш ключ" value={key} onChange={(e) => setKey(e.target.value)} aria-label="Ключ" />
-
-            <textarea className="text-output" placeholder="Результат шифрования" value={outputText} readOnly aria-label="Результат" />
-
-            <div className="button-group">
-                <button className="action-button" onClick={handleEncrypt}>
+            <div className="rc4-buttons">
+                <button onClick={handleEncrypt} className="rc4-btn encrypt-btn">
                     Зашифровать
                 </button>
-                <button className="action-button" onClick={handleDecrypt}>
+                <button onClick={handleDecrypt} className="rc4-btn decrypt-btn">
                     Расшифровать
                 </button>
             </div>
+
+            {error && <div className="rc4-error">{error}</div>}
+
+            {hexCiphertext && (
+                <div className="rc4-result">
+                    <label>Шифротекст:</label>
+                    <div className="rc4-hex">{hexCiphertext}</div>
+                </div>
+            )}
+
+            {outputText && (
+                <div className="rc4-result">
+                    <label>Расшифрованный текст:</label>
+                    <div className="rc4-output">{outputText}</div>
+                </div>
+            )}
         </div>
     );
-};
-
-export default Check;
+}

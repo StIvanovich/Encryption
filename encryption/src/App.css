@@ -1,94 +1,86 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+.rc4-container {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    max-width: 650px;
+    margin: 0 auto;
+    color: #000; /* Весь текст — чёрный */
+    background-color: #fff; /* Явно указываем белый фон */
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.6;
-    background-color: #f9f9f9;
-    color: #333;
+.rc4-input-group {
+    margin-bottom: 14px;
 }
 
-.app-container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
-.cipher-service {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.cipher-service h1 {
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #222;
-}
-
-.text-input,
-.text-output {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 1rem;
-    resize: vertical;
-}
-
-.text-input:focus,
-.text-output:focus {
-    outline: none;
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-}
-
-.text-output {
-    background-color: #f5f5f5;
+.rc4-input-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 4px;
     color: #000;
-    cursor: default;
-    min-height: 60px;
 }
 
-.button-group {
+.rc4-input-group input {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    color: #000; /* Текст в инпутах — чёрный */
+    background-color: #fff;
+}
+
+.rc4-buttons {
     display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-.action-button {
-    padding: 0.6rem 1.2rem;
-    font-size: 1rem;
+.rc4-btn {
+    flex: 1;
+    padding: 10px 16px;
     border: none;
     border-radius: 6px;
-    color: white;
     cursor: pointer;
-    transition: background-color 0.2s;
+    font-size: 16px;
+    color: white; /* Белый текст на кнопках */
 }
 
-button:nth-of-type(1).action-button {
-    background-color: #4caf50;
+.encrypt-btn {
+    background-color: #4caf50; /* Зелёная */
 }
 
-button:nth-of-type(1).action-button:hover {
-    background-color: #45a049;
+.decrypt-btn {
+    background-color: #f44336; /* Красная */
 }
 
-button:nth-of-type(2).action-button {
-    background-color: #f44336;
+.rc4-result {
+    margin-bottom: 16px;
 }
 
-button:nth-of-type(2).action-button:hover {
-    background-color: #d32f2f;
+.rc4-result label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 6px;
+    color: #000;
 }
 
-.action-button:active {
-    transform: translateY(1px);
+.rc4-hex {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    word-break: break-all;
+    font-size: 14px;
+    color: #000;
+}
+
+.rc4-error {
+    color: #d32f2f;
+    background-color: #ffebee;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ffcdd2;
+    margin-bottom: 16px;
+    font-weight: bold;
 }
