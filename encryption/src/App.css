@@ -1,89 +1,93 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    background-color: #f9f9f9;
-    color: #333;
-    line-height: 1.6;
-}
-
-.app-container {
-    max-width: 800px;
+.rc5-container {
+    max-width: 600px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    color: #ffffff;
 }
 
-.cipher-container {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    margin-top: 1rem;
-}
-
-.app-title {
-    font-size: 1.8rem;
-    margin-bottom: 1.2rem;
+.rc5-container h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-weight: 600;
     color: #2c3e50;
 }
 
-.key-input {
-    width: 100%;
-    padding: 0.6rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
+.rc5-input-group {
+    margin-bottom: 16px;
 }
 
-.input-area,
-.output-area {
+.rc5-input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.rc5-key-input {
     width: 100%;
-    height: 120px;
-    padding: 0.8rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    max-width: 320px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.rc5-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
     font-family: monospace;
-    font-size: 1rem;
+    font-size: 14px;
     resize: vertical;
+    box-sizing: border-box;
 }
 
-.output-area {
-    background-color: #f5f5f5;
-    color: #333;
-}
-
-.button-group {
+.rc5-button-group {
     display: flex;
-    gap: 0.75rem;
-    justify-content: center;
+    gap: 12px;
+    margin: 20px 0;
 }
 
-.action-button {
-    padding: 0.6rem 1.2rem;
+.rc5-button {
+    flex: 1;
+    padding: 10px 16px;
     border: none;
-    border-radius: 4px;
-    color: white;
-    font-size: 1rem;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, opacity 0.2s;
 }
 
-.encrypt-btn {
-    background-color: #4caf50;
-}
-.encrypt-btn:hover {
-    background-color: #45a049;
+.rc5-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.decrypt-btn {
-    background-color: #f44336;
+.rc5-button--encrypt {
+    background-color: #38a169;
+    color: white;
 }
-.decrypt-btn:hover {
-    background-color: #d32f2f;
+
+.rc5-button--encrypt:hover:not(:disabled) {
+    background-color: #2f855a;
+}
+
+.rc5-button--decrypt {
+    background-color: #b21a1a;
+    color: white;
+}
+
+.rc5-button--decrypt:hover:not(:disabled) {
+    background-color: #9c5252;
+}
+
+.rc5-error {
+    color: #e53e3e;
+    margin: 12px 0;
+    font-size: 14px;
 }

@@ -1,11 +1,11 @@
 import "./App.css";
-import EncrypGOST from "./components/EncrypGOST";
+import EncrypRC5 from "./components/EncrypRC5";
 
 function App() {
     return (
         <>
             <main className="app-container">
-                <EncrypGOST />
+                <EncrypRC5 />
             </main>
         </>
     );
