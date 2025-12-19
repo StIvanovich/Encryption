@@ -87,7 +87,7 @@ const EncrypRSA = () => {
     };
 
     if (isGenerating) {
-        return <div className="rsa-loading">Генерация ключа</div>;
+        return;
     }
 
     return (
@@ -99,7 +99,7 @@ const EncrypRSA = () => {
                 <textarea className="rsa-textarea" rows="3" value={plainText} onChange={(e) => setPlainText(e.target.value)} placeholder="Введите текст для шифрования..." />
                 <br />
                 <button className="rsa-button encrypt-button" onClick={encrypt}>
-                    Зашифровать (RSA)
+                    Зашифровать
                 </button>
             </div>
 

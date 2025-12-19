@@ -6,13 +6,6 @@
     margin: 0 auto;
 }
 
-.rsa-loading {
-    background-color: #b78787;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-    text-align: center;
-}
-
 .rsa-container h2 {
     margin-top: 0;
     margin-bottom: 20px;
@@ -26,13 +19,14 @@
 
 .rsa-textarea {
     width: 100%;
-    max-width: 600px;
+    max-width: 900px;
     padding: 8px;
-    font-size: 14px;
+    font-size: 15px;
     box-sizing: border-box;
-    resize: vertical;
+    resize: both;
     border: 1px solid #000000;
     border-radius: 4px;
+    min-height: 120px;
 }
 
 .rsa-button {
