@@ -1,90 +1,61 @@
-#root {
+.rsa-container {
+    background-color: #ffffff;
+    padding: 20px;
+    font-family: Arial, sans-serif;
     max-width: 800px;
     margin: 0 auto;
-    padding: 2rem 1rem;
-    text-align: center;
+}
+
+.rsa-loading {
+    background-color: #b78787;
+    padding: 20px;
     font-family: Arial, sans-serif;
+    text-align: center;
 }
 
-.rsa-card {
-    background-color: #f9f9f9;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    margin-top: 1rem;
-}
-
-.rsa-title {
+.rsa-container h2 {
+    margin-top: 0;
     margin-bottom: 20px;
-    color: #333;
-    font-size: 1.8rem;
 }
 
-.rsa-input {
+.rsa-container h3 {
+    margin-top: 24px;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.rsa-textarea {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-family: inherit;
+    max-width: 600px;
+    padding: 8px;
+    font-size: 14px;
     box-sizing: border-box;
-}
-
-.rsa-input:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.button-group {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 20px;
+    resize: vertical;
+    border: 1px solid #000000;
+    border-radius: 4px;
 }
 
 .rsa-button {
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: 600;
-    color: white;
     border: none;
-    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin-top: 10px;
+    transition: opacity 0.2s;
 }
 
-.rsa-button:active {
-    transform: translateY(1px);
+.rsa-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.rsa-button.encrypt {
-    background-color: #28a745;
+.encrypt-button {
+    background-color: #4caf50;
+    color: rgb(0, 0, 0);
 }
 
-.rsa-button.encrypt:hover {
-    background-color: #218838;
-}
-
-.rsa-button.decrypt {
-    background-color: #dc3545;
-}
-
-.rsa-button.decrypt:hover {
-    background-color: #c82333;
-}
-
-.rsa-result {
-    background-color: #f0f8ff;
-    padding: 16px;
-    border-radius: 6px;
-    border: 1px solid #cce7ff;
-    font-family: monospace;
-    font-size: 1rem;
-    color: #333;
-    min-height: 2em;
-    text-align: left;
-    white-space: pre-wrap;
-    word-break: break-word;
+.decrypt-button {
+    background-color: #f44336;
+    color: rgb(0, 0, 0);
 }

@@ -1,61 +1,121 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const EncrypRSA = () => {
-    const [userInput, setUserInput] = useState("");
-    const [result, setResult] = useState("Результат шифрования");
+    const [plainText, setPlainText] = useState("");
+    const [encryptedText, setEncryptedText] = useState("");
+    const [decryptedText, setDecryptedText] = useState("");
+    const [keyPair, setKeyPair] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(true);
 
-    const hexEncode = (plainText) => {
-        return plainText
-            .split("")
-            .map((char) => char.charCodeAt(0).toString(16).padStart(2, "0"))
-            .join(" ");
+    useEffect(() => {
+        const generateKeyPair = async () => {
+            try {
+                const keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: "RSA-OAEP",
+                        modulusLength: 2048,
+                        publicExponent: new Uint8Array([1, 0, 1]),
+                        hash: "SHA-256",
+                    },
+                    true,
+                    ["encrypt", "decrypt"]
+                );
+                setKeyPair(keyPair);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsGenerating(false);
+            }
+        };
+
+        if (window.crypto?.subtle) {
+            generateKeyPair();
+        } else {
+            setIsGenerating(false);
+        }
+    }, []);
+
+    const arrayBufferToBase64 = (buffer) => {
+        return btoa(String.fromCharCode(...new Uint8Array(buffer)));
     };
 
-    const hexDecode = (encodedText) => {
+    const base64ToArrayBuffer = (str) => {
+        const binary = atob(str);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    };
+
+    const encrypt = async () => {
+        if (!keyPair || !plainText.trim()) {
+            return;
+        }
+
         try {
-            return encodedText
-                .split(" ")
-                .map((hex) => String.fromCharCode(parseInt(hex, 16)))
-                .join("");
-        } catch {
-            return "Ошибка: недопустимый формат шифротекста";
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(plainText);
+
+            if (encoded.length > 190) {
+                return;
+            }
+
+            const encrypted = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, keyPair.publicKey, encoded);
+
+            setEncryptedText(arrayBufferToBase64(encrypted));
+            setDecryptedText("");
+        } catch (err) {
+            console.error("Ошибка шифрования RSA:", err);
         }
     };
 
-    const encryptText = () => {
-        if (userInput.trim() === "") {
-            setResult("Введите текст для шифрования");
+    const decrypt = async () => {
+        if (!keyPair || !encryptedText.trim()) {
             return;
         }
-        const encoded = hexEncode(userInput);
-        setResult(encoded);
+
+        try {
+            const encryptedBuffer = base64ToArrayBuffer(encryptedText);
+            const decrypted = await window.crypto.subtle.decrypt({ name: "RSA-OAEP" }, keyPair.privateKey, encryptedBuffer);
+
+            const result = new TextDecoder().decode(decrypted);
+            setDecryptedText(result);
+        } catch (err) {
+            console.error("Ошибка расшифровки RSA:", err);
+        }
     };
 
-    const decrypText = () => {
-        if (userInput.trim() === "") {
-            setResult("Введите зашифрованный текст");
-            return;
-        }
-        const decoded = hexDecode(userInput);
-        setResult(decoded);
-    };
+    if (isGenerating) {
+        return <div className="rsa-loading">Генерация ключа</div>;
+    }
 
     return (
-        <div className="rsa-card">
-            <h1 className="rsa-title">Шифр RSA</h1>
+        <div className="rsa-container">
+            <h2>Шифрование RSA</h2>
 
-            <textarea className="rsa-input" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="Введите текст для шифрования или расшифровки" rows={4} />
-
-            <div className="button-group">
-                <button className="rsa-button encrypt" onClick={encryptText} type="button">
-                    Зашифровать
+            <div>
+                <h3>Исходный текст:</h3>
+                <textarea className="rsa-textarea" rows="3" value={plainText} onChange={(e) => setPlainText(e.target.value)} placeholder="Введите текст для шифрования..." />
+                <br />
+                <button className="rsa-button encrypt-button" onClick={encrypt}>
+                    Зашифровать (RSA)
                 </button>
-                <button className="rsa-button decrypt" onClick={decrypText} type="button">
+            </div>
+
+            <div>
+                <h3>Зашифрованный текст:</h3>
+                <textarea className="rsa-textarea" rows="4" value={encryptedText} readOnly placeholder="Результат" />
+                <br />
+                <button className="rsa-button decrypt-button" onClick={decrypt}>
                     Расшифровать
                 </button>
             </div>
 
-            <div className="rsa-result">{result}</div>
+            <div>
+                <h3>Расшифрованный текст:</h3>
+                <textarea className="rsa-textarea" rows="3" value={decryptedText} readOnly placeholder="Результат" />
+            </div>
         </div>
     );
 };
